@@ -1,8 +1,8 @@
 # PyRex – High-quality corpora from CommonCrawl snapshots
 
-I stopped maintaining my old [texrex](https://github.com/rsling/texrex) web data cleaning software in December 2021. PyRex is a streamlined, cleaned up, and modular Python 3 reimplementation of texrex with a focus on analysing CommonCrawl data. While focus is on (W)ARC and CommonCrawl, any source of web data can be processed at least in principle.
+I stopped maintaining my old [texrex](https://github.com/rsling/texrex) web data cleaning software in December 2021. PyRex is a streamlined, cleaned up, and modular Python 3 reimplementation of texrex made primarily for analysing CommonCrawl data. While focus is on (W)ARC and CommonCrawl, any source of web data can be processed.
 
-If things go well, NLP modules for German and English (such as currently available in [COWTek](https://github.com/rsling/cow)) might also be added, turning PyRex into a one-stop shop for turning CommonCrawl snapshots into usable and fully annotated high-quality German and English corpora.
+If things go well, NLP modules for German and English (such as currently available in [COWTek](https://github.com/rsling/cow)) might also be added, making PyRex into a one-stop shop for turning CommonCrawl snapshots into usable and fully annotated high-quality German and English corpora.
 
 I'm also planning to include modules which alleviate the intrinsic sampling bias of breadth-first crawls, based on the work I did for the ClaraX web crawler (part of texrex). However, this will only work if CommonCrawl data allow for a good guess of at least some properties of the real web graph.
 
