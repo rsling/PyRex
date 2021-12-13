@@ -10,7 +10,7 @@ If you're a researcher interested in using/evaluating the kind of corpora that y
 
 # Planned Features
 
-## Core processing
+### Core processing
 
 - read WARC or ARC files
 - strip HTML, scripts, stylesheets
@@ -19,7 +19,7 @@ If you're a researcher interested in using/evaluating the kind of corpora that y
 - convert all HTML entities to appropriate codepoints (including rogue Win-1252)
 - perform additional normalization (exotic Unicode)
 
-## Cleanup (texrex re-implementation)
+### Cleanup (texrex re-implementation)
 
 - filter perfect duplicate documents
 - filter or mark near-duplicate documents
@@ -30,14 +30,14 @@ If you're a researcher interested in using/evaluating the kind of corpora that y
 - remove hard hyphenation (German and English)
 - fix run-together sentences (German and English)
 
-## Annotation, analysis and output (texrex re-implementation)
+### Annotation, analysis and output (texrex re-implementation)
 
 - add server IP geolocation meta information (country, region, city – currently based on GeoLite)
 - link data/web graph analysis
 - write standard-compliant XML output
 - custom COCOA output format to bias restrictive intellectual property legislation ([Paper](http://rolandschaefer.net/?p=994))
 
-## Future plans
+### Future plans
 
 - partial crawl bias removal based on crawling experiments ([Paper](http://rolandschaefer.net/?p=1201))
 - full linguistic processing for German and English (from [COWTek](https://github.com/rsling/cow))
