@@ -45,7 +45,7 @@ If you're a researcher interested in using/evaluating the kind of corpora that y
 # Reasons for abandoning texrex and FreePascal
 
 - There are many now obsolete low-level optimisations in texrex making the code unnecessarily complex.
-- The thread pool implementation in texrex is quite messy.
+- The thread pool architecture of texrex is difficult to configure and handle.
 - The FreePascal compiler is great, but the FreePascal ecosystem sucks.
 - Python increases re-usability.
 
