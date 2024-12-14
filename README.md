@@ -8,7 +8,7 @@ I'm also planning to include modules which alleviate the intrinsic sampling bias
 
 If you're a researcher interested in using/evaluating the kind of corpora that you can create with PyRex, visit [COW](https://www.webcorpora.org/), where we serve corpora created with PyRex's predecessor texrex.
 
-# Planned Features
+# Planned Features for the first version codenamed: _One (Always Hardcore)_
 
 ### Core processing
 
