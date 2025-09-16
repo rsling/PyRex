@@ -46,11 +46,9 @@ def process_record(record_data: List, html_payload: str) -> Optional[dict]:
                 quick_text = extract_text_fast(normalized_payload)
             except Exception:
                 # Fall back to basic text extraction
-                from pyrex_html import parse_html
                 temp_soup = parse_html(normalized_payload)
                 quick_text = temp_soup.get_text(separator=' ', strip=True)
         else:
-            from pyrex_html import parse_html
             temp_soup = parse_html(normalized_payload)
             quick_text = temp_soup.get_text(separator=' ', strip=True)
 
