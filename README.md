@@ -1,61 +1,9 @@
 # PyRex – High-quality corpora from CommonCrawl snapshots
 
-I stopped maintaining my old [texrex](https://github.com/rsling/texrex) web data cleaning software in December 2021. PyRex is a streamlined, cleaned up, and modular Python 3 reimplementation of texrex made primarily for analysing CommonCrawl data. While focus is on (W)ARC and CommonCrawl, any source of web data can be processed.
+I stopped maintaining my old [texrex](https://github.com/rsling/texrex) web data cleaning software in December 2021. PyRex is a streamlined and cleaned up Python 3 reimplementation of texrex made for analysing CommonCrawl data. The focus i entirely on German. After all, there is THE standard web corpora of English now. It covers all English language on the web, and it's bleeding representative, too!
 
-If things go well, NLP modules for German and English (such as currently available in [COWTek](https://github.com/rsling/cow)) might also be added, making PyRex into a one-stop shop for turning CommonCrawl snapshots into usable and fully annotated high-quality German and English corpora.
+# First iteration: _One (Always Hardcore)_
 
-I'm also planning to include modules which alleviate the intrinsic sampling bias of breadth-first crawls, based on the work I did for the ClaraX web crawler (part of texrex). However, this will only work if CommonCrawl data allow for a good guess of at least some properties of the real web graph.
+*Update 2025* Instead of listing features here, I just admit that what we did 10 to 15 years ago was rather boring and borderline trivial. I'm now working with Claude to very quickly rebuild the functionality of texrex within a few Python script, making heavy use of existing libraries. Since I'm not being paid to do coding, this is the only way there will ever be any new COW corpora again. The critical issues with LLM coding don't really affect some stupid scripts to do HTML cleaning. Honestly, I mean ...
 
-If you're a researcher interested in using/evaluating the kind of corpora that you can create with PyRex, visit [COW](https://www.webcorpora.org/), where we serve corpora created with PyRex's predecessor texrex.
-
-# Planned Features version: _One (Always Hardcore)_
-
-### Core processing
-
-- read WARC or ARC files
-- strip HTML, scripts, stylesheets
-- extract meta information from crawl headers
-- normalize encodings to UTF-8 including repair strategies for messy encodings
-- convert all HTML entities to appropriate codepoints (including rogue Win-1252)
-- perform additional normalization (exotic Unicode)
-
-### Cleanup (texrex re-implementation)
-
-- filter perfect duplicate documents
-- filter or mark near-duplicate documents
-- filter or mark boilerplate passages ([Paper](http://rolandschaefer.net/?p=88))
-- filter or mark in-document deduplication
-- recognize the document language and assess the text quality ([Paper](http://rolandschaefer.net/?p=78))
-- recognize block and sentence language (German and English)
-- remove hard hyphenation (German and English)
-- fix run-together sentences (German and English)
-
-### Annotation, analysis and output (texrex re-implementation)
-
-- add server IP geolocation meta information (country, region, city – currently based on GeoLite)
-- link data/web graph analysis
-- write standard-compliant XML output
-- custom COCOA output format to bias restrictive intellectual property legislation ([Paper](http://rolandschaefer.net/?p=994))
-
-### Future plans
-
-- partial crawl bias removal based on crawling experiments ([Paper](http://rolandschaefer.net/?p=1201))
-- full linguistic processing for German and English (from [COWTek](https://github.com/rsling/cow))
-
-# Reasons for abandoning texrex and FreePascal
-
-- There are many now obsolete low-level optimisations in texrex making the code unnecessarily complex.
-- The thread pool architecture of texrex is difficult to configure and handle.
-- The FreePascal compiler is great, but the FreePascal ecosystem sucks.
-- Python increases re-usability.
-
-# Papers to read about PyRex (formerly texrex) and related technology
-
-- http://rolandschaefer.net/?p=88
-- http://rolandschaefer.net/?p=994
-- http://rolandschaefer.net/?p=749
-- http://rolandschaefer.net/?p=78
-- http://rolandschaefer.net/?p=74
-- http://rolandschaefer.net/?p=70
-
-
+It's certainly less fun, but my idea of fun has changed anyway.
