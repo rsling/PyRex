@@ -12,7 +12,7 @@ from warcio.archiveiterator import ArchiveIterator
 
 # Import PyRex modules
 from config.settings import settings
-from pyrex_basic import decode_and_normalize, fix_text_encoding
+from pyrex_basic import decode_and_normalize, fix_text_encoding, detect_and_filter_languages
 from pyrex_html import parse_html, filter_minimal_html, extract_text_fast, SELECTOLAX_AVAILABLE
 from pyrex_output import output_console, output_dump
 
@@ -37,7 +37,32 @@ def process_record(record_data: List, html_payload: str) -> Optional[dict]:
     # Step 2: Normalize Unicode to NFC form
     normalized_payload = unicodedata.normalize('NFC', repaired_payload)
 
-    # Step 3: Fast pre-filtering - check text length before expensive HTML parsing
+    # Step 3: Fast language detection and filtering before expensive HTML parsing
+    # Extract a quick text sample for language detection
+    if settings.enable_language_filtering:
+        # Quick text extraction for language detection (use fast method)
+        if SELECTOLAX_AVAILABLE:
+            try:
+                quick_text = extract_text_fast(normalized_payload)
+            except Exception:
+                # Fall back to basic text extraction
+                from pyrex_html import parse_html
+                temp_soup = parse_html(normalized_payload)
+                quick_text = temp_soup.get_text(separator=' ', strip=True)
+        else:
+            from pyrex_html import parse_html
+            temp_soup = parse_html(normalized_payload)
+            quick_text = temp_soup.get_text(separator=' ', strip=True)
+
+        # Detect and filter by language
+        should_continue, detected_language = detect_and_filter_languages(quick_text)
+        if not should_continue:
+            # Skip further processing for documents in unaccepted languages
+            return None
+    else:
+        detected_language = None
+
+    # Step 3.5: Filter documents by minimal text length
     if not filter_minimal_html(normalized_payload):
         # Skip further processing for documents that don't meet criteria
         return None
@@ -58,6 +83,12 @@ def process_record(record_data: List, html_payload: str) -> Optional[dict]:
             parsed_html = parse_html(normalized_payload)
             visible_text = parsed_html.get_text(separator=' ', strip=True)
 
+    # Add detected language to record metadata
+    if detected_language:
+        record_data.append(f"Language: {detected_language}")
+    elif settings.enable_language_filtering:
+        record_data.append("Language: unknown")
+
     # TODO: Add boilerplate detection and other content processing steps here
 
     # Return all processed data
@@ -67,7 +98,8 @@ def process_record(record_data: List, html_payload: str) -> Optional[dict]:
         'repaired_payload': repaired_payload,
         'normalized_payload': normalized_payload,
         'parsed_html': parsed_html,
-        'visible_text': visible_text
+        'visible_text': visible_text,
+        'detected_language': detected_language
     }
 
 

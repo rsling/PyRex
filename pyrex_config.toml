@@ -7,10 +7,10 @@
 # Text Processing Settings
 # Minimum text length (characters) required to process a document
 # Documents with less text content will be filtered out
-minimal_text_length = 1000
+minimal_text_length = 3000
 
 # Number of characters to display in console preview
-preview_text_chars = 2000
+preview_text_chars = 5000
 
 # Performance Settings
 # Sample size in bytes for encoding detection
@@ -37,6 +37,23 @@ use_lxml_parser = true
 # Fast parsing - use Selectolax for text extraction when HTML output not needed
 # Provides 10-15x performance improvement for text-only processing
 use_fast_parsing = true
+
+# Language Detection Settings
+# Enable automatic language detection and filtering
+enable_language_filtering = true
+
+# List of accepted language codes (ISO 639-1 format)
+# Only documents in these languages will be processed further
+accepted_languages = ["de"]
+
+# Number of characters to analyze for language detection
+# Larger samples are more accurate but slower
+language_detection_chars = 3000
+
+# Confidence threshold for language detection (0.0-1.0)
+# Higher values = more precise but may reject ambiguous text
+# Lower values = more permissive but may misclassify similar languages
+language_confidence_threshold = 0.85
 
 # Text Encoding Settings
 # Skip ASCII optimization in text encoding repair

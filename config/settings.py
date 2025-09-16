@@ -76,6 +76,30 @@ class PyRexSettings(BaseSettings):
         description="Use Selectolax for fast text extraction when HTML output not needed"
     )
 
+    # Language Detection Settings
+    enable_language_filtering: bool = Field(
+        default=True,
+        description="Enable language detection and filtering"
+    )
+
+    accepted_languages: list[str] = Field(
+        default=["de"],
+        description="List of accepted language codes (ISO 639-1)"
+    )
+
+    language_detection_chars: int = Field(
+        default=1000,
+        gt=0,
+        description="Number of characters to use for language detection (from start of text)"
+    )
+
+    language_confidence_threshold: float = Field(
+        default=0.85,
+        ge=0.0,
+        le=1.0,
+        description="Minimum confidence threshold for language detection (0.0-1.0, higher = more precise)"
+    )
+
     # Text Encoding Settings
     skip_ascii_optimization: bool = Field(
         default=False,
