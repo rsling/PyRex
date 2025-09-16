@@ -55,6 +55,19 @@ language_detection_chars = 3000
 # Lower values = more permissive but may misclassify similar languages
 language_confidence_threshold = 0.85
 
+# URL Filtering Settings
+# Enable URL-based filtering for German-speaking regions
+enable_url_filtering = true
+
+# Accepted top-level domains (case-insensitive)
+accepted_tlds = ["de", "at", "ch"]
+
+# Accepted subdomains (case-insensitive)
+accepted_subdomains = ["de", "at", "ch"]
+
+# Accepted URL path segments (case-insensitive)
+accepted_path_segments = ["de", "de-de", "de-at", "de-ch"]
+
 # Text Encoding Settings
 # Skip ASCII optimization in text encoding repair
 # Enable for more thorough processing of seemingly clean text
@@ -69,7 +82,7 @@ output_directory = "output"
 
 # Include HTML tags in output (both console and dump)
 # false = plain text only, true = HTML with tags
-dump_with_html_tags = false
+dump_with_html_tags = true
 
 # Display options for console output
 show_compression_stats = true

@@ -7,14 +7,128 @@ Reads gzipped WARC files and processes HTML records sequentially.
 import gzip
 import sys
 import unicodedata
-from typing import List, Optional
+from typing import List, Optional, Tuple
+from urllib.parse import urlparse
 from warcio.archiveiterator import ArchiveIterator
+
+try:
+    import tldextract
+    TLDEXTRACT_AVAILABLE = True
+except ImportError:
+    TLDEXTRACT_AVAILABLE = False
 
 # Import PyRex modules
 from config.settings import settings
 from pyrex_basic import decode_and_normalize, fix_text_encoding, detect_and_filter_languages
 from pyrex_html import parse_html, filter_minimal_html, extract_text_fast, SELECTOLAX_AVAILABLE
 from pyrex_output import output_console, output_dump
+
+
+def parse_and_filter_url(url: str) -> Tuple[bool, Optional[str], Optional[str], Optional[str]]:
+    """
+    Parse URL and filter based on German-speaking regions.
+
+    Performs three checks (all case-insensitive):
+    1. Is the TLD in the accepted list?
+    2. Is the subdomain in the accepted list?
+    3. Is any URL path segment in the accepted list?
+
+    Returns True if ANY of these checks pass.
+
+    Args:
+        url: The URL to parse and filter
+
+    Returns:
+        Tuple of (should_continue: bool, tld: str, domain: str, hostname: str)
+        - should_continue: True if URL passes filtering
+        - tld: Top-level domain (e.g., "de")
+        - domain: Domain name without subdomain (e.g., "example.de")
+        - hostname: Full hostname including subdomain (e.g., "www.example.de")
+    """
+    # Return early if URL filtering is disabled
+    if not settings.enable_url_filtering:
+        return True, None, None, None
+
+    # Return early if no URL to analyze
+    if not url or not url.strip():
+        if settings.verbose_logging:
+            print("Warning: No URL provided for filtering")
+        return False, None, None, None
+
+    try:
+        # Parse URL using urllib
+        parsed = urlparse(url.lower().strip())
+        hostname = parsed.netloc.lower()
+        path = parsed.path.lower()
+
+        if not hostname:
+            if settings.verbose_logging:
+                print(f"Warning: No hostname found in URL: {url}")
+            return False, None, None, None
+
+        # Extract TLD, domain, and subdomain using tldextract for reliability
+        if TLDEXTRACT_AVAILABLE:
+            try:
+                extracted = tldextract.extract(url)
+                tld = extracted.suffix.lower()
+                domain_name = extracted.domain.lower()
+                subdomain = extracted.subdomain.lower()
+
+                # Construct full domain and hostname
+                if tld and domain_name:
+                    domain = f"{domain_name}.{tld}"
+                    full_hostname = f"{subdomain}.{domain}" if subdomain else domain
+                else:
+                    # Fallback if extraction fails
+                    domain = hostname
+                    full_hostname = hostname
+                    tld = hostname.split('.')[-1] if '.' in hostname else ""
+                    subdomain = hostname.split('.')[0] if '.' in hostname and len(hostname.split('.')) > 2 else ""
+
+            except Exception as e:
+                if settings.verbose_logging:
+                    print(f"Warning: tldextract failed for {url}: {e}")
+                # Fallback to manual parsing
+                parts = hostname.split('.')
+                tld = parts[-1] if parts else ""
+                domain = '.'.join(parts[-2:]) if len(parts) >= 2 else hostname
+                subdomain = parts[0] if len(parts) > 2 else ""
+                full_hostname = hostname
+        else:
+            # Manual parsing fallback when tldextract not available
+            parts = hostname.split('.')
+            tld = parts[-1] if parts else ""
+            domain = '.'.join(parts[-2:]) if len(parts) >= 2 else hostname
+            subdomain = parts[0] if len(parts) > 2 else ""
+            full_hostname = hostname
+
+        # Check 1: Is TLD in accepted list?
+        tld_match = tld in [t.lower() for t in settings.accepted_tlds] if tld else False
+
+        # Check 2: Is subdomain in accepted list?
+        subdomain_match = subdomain in [s.lower() for s in settings.accepted_subdomains] if subdomain else False
+
+        # Check 3: Is any path segment in accepted list?
+        path_segments = [seg.strip() for seg in path.split('/') if seg.strip()]
+        accepted_segments_lower = [p.lower() for p in settings.accepted_path_segments]
+        path_match = any(seg in accepted_segments_lower for seg in path_segments)
+
+        # Accept if ANY check passes
+        should_continue = tld_match or subdomain_match or path_match
+
+        if settings.verbose_logging:
+            print(f"URL filtering: {url}")
+            print(f"  TLD: '{tld}' ({'✓' if tld_match else '✗'})")
+            print(f"  Subdomain: '{subdomain}' ({'✓' if subdomain_match else '✗'})")
+            print(f"  Path segments: {path_segments} ({'✓' if path_match else '✗'})")
+            print(f"  Result: {'ACCEPTED' if should_continue else 'REJECTED'}")
+
+        return should_continue, tld, domain, full_hostname
+
+    except Exception as e:
+        if settings.verbose_logging:
+            print(f"Warning: URL parsing failed for {url}: {e}")
+        return False, None, None, None
 
 
 def process_record(record_data: List, html_payload: str) -> Optional[dict]:
@@ -127,6 +241,27 @@ def read_warc_file(warc_file_path: str) -> None:
                     f"Content-Length: {record.rec_headers.get('Content-Length', 'N/A')}",
                     f"Record ID: {record.rec_headers.get('WARC-Record-ID', 'N/A')}"
                 ]
+
+                # Early URL filtering (before any expensive processing)
+                target_uri = record.rec_headers.get('WARC-Target-URI', '')
+                if target_uri:
+                    should_continue, tld, domain, hostname = parse_and_filter_url(target_uri)
+                    if not should_continue:
+                        if settings.verbose_logging:
+                            print(f"Skipping record #{record_count} (URL filter): {target_uri}")
+                        continue
+
+                    # Add URL components to record metadata if filtering passed
+                    if tld:
+                        record_data.append(f"TLD: {tld}")
+                    if domain:
+                        record_data.append(f"Domain: {domain}")
+                    if hostname:
+                        record_data.append(f"Hostname: {hostname}")
+                else:
+                    if settings.verbose_logging:
+                        print(f"Skipping record #{record_count} (no URI): {record.rec_headers}")
+                    continue
 
                 # Only process response records that contain HTML
                 if record.rec_type == 'response':

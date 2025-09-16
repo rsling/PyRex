@@ -100,6 +100,27 @@ class PyRexSettings(BaseSettings):
         description="Minimum confidence threshold for language detection (0.0-1.0, higher = more precise)"
     )
 
+    # URL Filtering Settings
+    enable_url_filtering: bool = Field(
+        default=True,
+        description="Enable URL-based filtering for German-speaking regions"
+    )
+
+    accepted_tlds: list[str] = Field(
+        default=["de", "at", "ch"],
+        description="List of accepted top-level domains"
+    )
+
+    accepted_subdomains: list[str] = Field(
+        default=["de", "at", "ch"],
+        description="List of accepted subdomains"
+    )
+
+    accepted_path_segments: list[str] = Field(
+        default=["de", "de-de", "de-at", "de-ch"],
+        description="List of accepted URL path segments"
+    )
+
     # Text Encoding Settings
     skip_ascii_optimization: bool = Field(
         default=False,
