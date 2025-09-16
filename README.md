@@ -4,9 +4,11 @@ I stopped maintaining my old [texrex](https://github.com/rsling/texrex) web data
 
 # First iteration: _One (Always Hardcore)_
 
-*Update 2025* Instead of listing features here, I just admit that what we did 10 to 15 years ago was rather boring and borderline trivial. I'm now working with Claude to very quickly rebuild the functionality of texrex within a few Python script, making heavy use of existing libraries. Since I'm not being paid to do coding, this is the only way there will ever be any new COW corpora again. The critical issues with LLM coding don't really affect some stupid scripts to do HTML cleaning. Honestly, I mean ...
+*Update 2025* Instead of listing features here, I just admit that what we did 10 to 15 years ago was rather boring and borderline trivial. I'm now working with Claude to very quickly rebuild the functionality of texrex within a few Python script, making heavy use of existing libraries. Since I'm not being paid to do coding, this is the only way there will ever be any new COW corpora again. Any of the problematic issues of LLM coding (security concerns, very large codebases, etc.) don't affect PyRex. Honestly, I mean ... A collection of text processing scripts.
 
-It's certainly less fun, but my idea of fun has changed anyway.
+Working like this is certainly less fun, but my idea of fun has changed anyway.
+
+The following section is Claude's view of the progress that was made. I essentially agree.
 
 ## Features Implemented
 
