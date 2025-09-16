@@ -11,28 +11,36 @@ from pathlib import Path
 from typing import List
 from bs4 import BeautifulSoup
 from config.settings import settings
+from pyrex_html import parse_html
+from typing import Optional
 
 
-def _get_content_for_output(parsed_html: BeautifulSoup, visible_text: str) -> str:
+def _get_content_for_output(parsed_html: Optional[BeautifulSoup], visible_text: str, normalized_payload: str = None) -> str:
     """
     Get content for output based on configuration settings.
 
     Args:
-        parsed_html: Parsed and cleaned HTML structure
+        parsed_html: Parsed and cleaned HTML structure (may be None for fast processing)
         visible_text: Extracted visible text content
+        normalized_payload: Original HTML payload (used if parsed_html is None)
 
     Returns:
         Content string based on dump_with_html_tags setting
     """
     if settings.dump_with_html_tags:
-        # Return HTML with tags (prettified for readability)
-        return str(parsed_html.prettify())
+        if parsed_html is not None:
+            # Return HTML with tags (prettified for readability)
+            return str(parsed_html.prettify())
+        else:
+            # Need to parse HTML now for output (fallback case)
+            temp_parsed = parse_html(normalized_payload)
+            return str(temp_parsed.prettify())
     else:
         # Return plain text only
         return visible_text
 
 
-def output_dump(record_data: List, normalized_payload: str, parsed_html: BeautifulSoup, visible_text: str, warc_filename: str) -> None:
+def output_dump(record_data: List, normalized_payload: str, parsed_html: Optional[BeautifulSoup], visible_text: str, warc_filename: str) -> None:
     """
     Dump processed record information to a gzipped file.
 
@@ -58,7 +66,7 @@ def output_dump(record_data: List, normalized_payload: str, parsed_html: Beautif
         output_file = output_dir / output_basename
 
         # Get content based on configuration
-        content = _get_content_for_output(parsed_html, visible_text)
+        content = _get_content_for_output(parsed_html, visible_text, normalized_payload)
 
         # Append to gzipped file (create if doesn't exist)
         mode = 'at' if output_file.exists() else 'wt'
@@ -88,7 +96,7 @@ def output_dump(record_data: List, normalized_payload: str, parsed_html: Beautif
         # Continue processing other records even if one fails
 
 
-def output_console(record_data: List, normalized_payload: str, parsed_html: BeautifulSoup, visible_text: str) -> None:
+def output_console(record_data: List, normalized_payload: str, parsed_html: Optional[BeautifulSoup], visible_text: str) -> None:
     """
     Display processed record information to console and wait for user input.
 
@@ -107,7 +115,7 @@ def output_console(record_data: List, normalized_payload: str, parsed_html: Beau
         print(f"{i}: {item}")
 
     # Get content based on configuration
-    content = _get_content_for_output(parsed_html, visible_text)
+    content = _get_content_for_output(parsed_html, visible_text, normalized_payload)
     content_type = "HTML with tags" if settings.dump_with_html_tags else "Plain text"
 
     print("-" * 40)

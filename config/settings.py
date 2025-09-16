@@ -71,6 +71,11 @@ class PyRexSettings(BaseSettings):
         description="Prefer lxml parser over html.parser for better performance"
     )
 
+    use_fast_parsing: bool = Field(
+        default=True,
+        description="Use Selectolax for fast text extraction when HTML output not needed"
+    )
+
     # Text Encoding Settings
     skip_ascii_optimization: bool = Field(
         default=False,

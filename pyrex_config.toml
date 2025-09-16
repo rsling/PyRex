@@ -34,6 +34,10 @@ remove_styles = true
 # Parser preference - lxml is faster but requires additional dependency
 use_lxml_parser = true
 
+# Fast parsing - use Selectolax for text extraction when HTML output not needed
+# Provides 10-15x performance improvement for text-only processing
+use_fast_parsing = true
+
 # Text Encoding Settings
 # Skip ASCII optimization in text encoding repair
 # Enable for more thorough processing of seemingly clean text
@@ -41,14 +45,14 @@ skip_ascii_optimization = false
 
 # Output Settings
 # Output method: "console" for interactive display, "dump" for file output
-output_mode = "dump"
+output_mode = "console"
 
 # Output directory for dump files (created if doesn't exist)
 output_directory = "output"
 
 # Include HTML tags in output (both console and dump)
 # false = plain text only, true = HTML with tags
-dump_with_html_tags = true
+dump_with_html_tags = false
 
 # Display options for console output
 show_compression_stats = true

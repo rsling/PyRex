@@ -13,7 +13,7 @@ from warcio.archiveiterator import ArchiveIterator
 # Import PyRex modules
 from config.settings import settings
 from pyrex_basic import decode_and_normalize, fix_text_encoding
-from pyrex_html import parse_html, filter_minimal_html
+from pyrex_html import parse_html, filter_minimal_html, extract_text_fast, SELECTOLAX_AVAILABLE
 from pyrex_output import output_console, output_dump
 
 
@@ -37,18 +37,28 @@ def process_record(record_data: List, html_payload: str) -> Optional[dict]:
     # Step 2: Normalize Unicode to NFC form
     normalized_payload = unicodedata.normalize('NFC', repaired_payload)
 
-    # Step 3: Parse HTML into structured representation with aggressive cleaning
-    parsed_html = parse_html(normalized_payload)
-
-    # Step 4: Filter documents by minimal text length
-    if not filter_minimal_html(parsed_html):
+    # Step 3: Fast pre-filtering - check text length before expensive HTML parsing
+    if not filter_minimal_html(normalized_payload):
         # Skip further processing for documents that don't meet criteria
         return None
 
-    # TODO: Add boilerplate detection and other content processing steps here
+    # Step 4: Parse HTML - use fast path if we only need text, full parsing if HTML output needed
+    if settings.dump_with_html_tags or not settings.use_fast_parsing:
+        # Need full BeautifulSoup parsing for HTML output or when fast parsing disabled
+        parsed_html = parse_html(normalized_payload)
+        visible_text = parsed_html.get_text(separator=' ', strip=True)
+    else:
+        # Use fast text extraction - 10x+ faster than BeautifulSoup
+        if SELECTOLAX_AVAILABLE:
+            visible_text = extract_text_fast(normalized_payload)
+            # Create minimal BeautifulSoup object for compatibility
+            parsed_html = None  # We'll handle this in output functions
+        else:
+            # Fallback to BeautifulSoup if Selectolax not available
+            parsed_html = parse_html(normalized_payload)
+            visible_text = parsed_html.get_text(separator=' ', strip=True)
 
-    # Extract visible text content (no HTML tags)
-    visible_text = parsed_html.get_text(separator=' ', strip=True)
+    # TODO: Add boilerplate detection and other content processing steps here
 
     # Return all processed data
     return {

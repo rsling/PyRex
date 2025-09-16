@@ -5,9 +5,59 @@ Handles HTML parsing, cleaning, and content filtering operations.
 """
 
 import html
-from typing import Optional
+from typing import Optional, Union
 from bs4 import BeautifulSoup, Comment
 from config.settings import settings
+
+try:
+    from selectolax.parser import HTMLParser as SelectolaxParser
+    SELECTOLAX_AVAILABLE = True
+except ImportError:
+    SELECTOLAX_AVAILABLE = False
+    # Create placeholder type for type hints when Selectolax not available
+    class SelectolaxParser:
+        pass
+
+
+def parse_html_fast(html_content: str) -> SelectolaxParser:
+    """
+    Fast HTML parsing using Selectolax for text extraction only.
+
+    This is significantly faster than BeautifulSoup but has limited functionality.
+    Use this when you only need text content, not HTML structure manipulation.
+
+    Args:
+        html_content: Raw HTML string to parse
+
+    Returns:
+        SelectolaxParser object optimized for text extraction
+    """
+    if not SELECTOLAX_AVAILABLE:
+        raise ImportError("Selectolax not available, use parse_html() instead")
+
+    try:
+        parser = SelectolaxParser(html_content)
+
+        # Remove unwanted elements based on settings
+        elements_to_remove = []
+        if settings.remove_scripts:
+            elements_to_remove.append("script")
+        if settings.remove_styles:
+            elements_to_remove.append("style")
+
+        # Always remove these non-content elements
+        elements_to_remove.extend(["meta", "link", "title", "base"])
+
+        # Remove elements (Selectolax uses different API)
+        for tag_name in elements_to_remove:
+            for element in parser.css(tag_name):
+                element.decompose()
+
+        return parser
+
+    except Exception as e:
+        print(f"Warning: Fast HTML parsing failed: {e}")
+        raise
 
 
 def parse_html(html_content: str) -> BeautifulSoup:
@@ -67,7 +117,33 @@ def parse_html(html_content: str) -> BeautifulSoup:
         return BeautifulSoup(fallback_html, 'html.parser')
 
 
-def filter_minimal_html(parsed_html: BeautifulSoup, minimal_text_length: Optional[int] = None) -> bool:
+def extract_text_fast(html_content: str) -> str:
+    """
+    Fast text extraction using Selectolax when available.
+
+    This is 10-15x faster than BeautifulSoup for text extraction.
+    Falls back to BeautifulSoup if Selectolax is not available.
+
+    Args:
+        html_content: Raw HTML string
+
+    Returns:
+        Extracted visible text content
+    """
+    if SELECTOLAX_AVAILABLE:
+        try:
+            parser = parse_html_fast(html_content)
+            return parser.text(separator=' ', strip=True)
+        except Exception:
+            # Fall back to BeautifulSoup on any error
+            pass
+
+    # Fallback to BeautifulSoup
+    soup = parse_html(html_content)
+    return soup.get_text(separator=' ', strip=True)
+
+
+def filter_minimal_html(parsed_html: Union[BeautifulSoup, str], minimal_text_length: Optional[int] = None) -> bool:
     """
     Filter documents based on minimal displayable text length.
 
@@ -85,8 +161,13 @@ def filter_minimal_html(parsed_html: BeautifulSoup, minimal_text_length: Optiona
         # Use provided length or fall back to configuration
         min_length = minimal_text_length if minimal_text_length is not None else settings.minimal_text_length
 
-        # Extract all visible text content
-        visible_text = parsed_html.get_text(separator=' ', strip=True)
+        # Handle both BeautifulSoup objects and raw HTML strings
+        if isinstance(parsed_html, str):
+            # Use fast text extraction for raw HTML
+            visible_text = extract_text_fast(parsed_html)
+        else:
+            # Use BeautifulSoup method for parsed objects
+            visible_text = parsed_html.get_text(separator=' ', strip=True)
 
         # Check if text length meets minimum requirement
         text_length = len(visible_text)
