@@ -1,0 +1,54 @@
+# PyRex Configuration File
+#
+# This TOML file contains all configurable parameters for PyRex processing.
+# Settings can also be overridden using environment variables with PYREX_ prefix.
+# Example: PYREX_MINIMAL_TEXT_LENGTH=500
+
+[text_processing]
+# Minimum text length (characters) required to process a document
+# Documents with less text content will be filtered out
+minimal_text_length = 1000
+
+# Number of characters to display in console preview
+preview_text_chars = 2000
+
+[performance]
+# Sample size in bytes for encoding detection
+# Larger samples are more accurate but slower for big files
+chardet_sample_size = 32768
+
+# Sample size in bytes for HTML content detection
+# Only used when Content-Type header doesn't indicate HTML
+html_detection_sample = 1024
+
+# Confidence threshold for encoding detection (0.0-1.0)
+# Lower values are more permissive, higher values more strict
+confidence_threshold = 0.7
+
+[html_processing]
+# HTML cleaning options - remove non-content elements
+remove_scripts = true
+remove_comments = true
+remove_styles = true
+
+# Parser preference - lxml is faster but requires additional dependency
+use_lxml_parser = true
+
+[text_encoding]
+# Skip ASCII optimization in text encoding repair
+# Enable for more thorough processing of seemingly clean text
+skip_ascii_optimization = false
+
+[output]
+# Display options for console output
+show_compression_stats = true
+show_processing_stats = true
+
+[debug]
+# Enable verbose logging for troubleshooting
+verbose_logging = false
+
+[future_features]
+# Features planned for future implementation
+enable_boilerplate_detection = false
+enable_deduplication = false

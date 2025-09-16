@@ -13,6 +13,7 @@ from warcio.archiveiterator import ArchiveIterator
 import chardet
 import ftfy
 from bs4 import BeautifulSoup, Comment
+from config.settings import settings
 
 
 def decode_and_normalize(payload: bytes) -> str:
@@ -25,15 +26,15 @@ def decode_and_normalize(payload: bytes) -> str:
     Returns:
         UTF-8 string (may still contain encoding artifacts)
     """
-    # Optimize: Sample first 32KB for encoding detection (much faster for large payloads)
-    sample_size = min(32768, len(payload))
+    # Optimize: Sample first portion for encoding detection (configurable for performance)
+    sample_size = min(settings.chardet_sample_size, len(payload))
     detection = chardet.detect(payload[:sample_size])
 
     encoding = detection.get('encoding')
     confidence = detection.get('confidence', 0.0)
 
     # Fall back to UTF-8 if detection is uncertain
-    if confidence < 0.7 or not encoding:
+    if confidence < settings.confidence_threshold or not encoding:
         encoding = 'utf-8'
 
     try:
@@ -63,7 +64,7 @@ def fix_text_encoding(text: str) -> str:
     try:
         # Optimize: Check if text likely needs processing to avoid unnecessary calls
         # Skip if text is pure ASCII and has no obvious encoding issues
-        if text.isascii() and '&' not in text and 'â' not in text:
+        if not settings.skip_ascii_optimization and text.isascii() and '&' not in text and 'â' not in text:
             return text
 
         # Step 1: Use ftfy to fix mojibake and encoding issues
@@ -104,22 +105,31 @@ def parse_html(html_content: str) -> BeautifulSoup:
         BeautifulSoup object with cleaned, well-formed HTML
     """
     try:
-        # Use lxml parser for speed and better HTML5 support, with fallback to html.parser
+        # Use configured parser preference for speed and compatibility
+        parser = 'lxml' if settings.use_lxml_parser else 'html.parser'
         try:
-            soup = BeautifulSoup(html_content, 'lxml')
+            soup = BeautifulSoup(html_content, parser)
         except:
+            # Fallback to html.parser if preferred parser fails
             soup = BeautifulSoup(html_content, 'html.parser')
 
-        # Remove all comments
-        for comment in soup.find_all(string=lambda text: isinstance(text, Comment)):
-            comment.extract()
+        # Remove comments if configured
+        if settings.remove_comments:
+            for comment in soup.find_all(string=lambda text: isinstance(text, Comment)):
+                comment.extract()
 
-        # Remove script and style elements completely
-        for element in soup(["script", "style"]):
-            element.decompose()
+        # Build list of elements to remove based on settings
+        elements_to_remove = []
+        if settings.remove_scripts:
+            elements_to_remove.append("script")
+        if settings.remove_styles:
+            elements_to_remove.append("style")
 
-        # Remove meta tags and other non-content head elements
-        for element in soup(["meta", "link", "title", "base"]):
+        # Always remove these non-content elements
+        elements_to_remove.extend(["meta", "link", "title", "base"])
+
+        # Remove configured elements completely
+        for element in soup(elements_to_remove):
             element.decompose()
 
         # Remove CDATA sections (they appear as text nodes, harder to target specifically)
@@ -135,7 +145,7 @@ def parse_html(html_content: str) -> BeautifulSoup:
         return BeautifulSoup(fallback_html, 'html.parser')
 
 
-def pass_minimal_html(parsed_html: BeautifulSoup, minimal_text_length: int) -> bool:
+def pass_minimal_html(parsed_html: BeautifulSoup, minimal_text_length: Optional[int] = None) -> bool:
     """
     Filter documents based on minimal displayable text length.
 
@@ -144,19 +154,22 @@ def pass_minimal_html(parsed_html: BeautifulSoup, minimal_text_length: int) -> b
 
     Args:
         parsed_html: BeautifulSoup object with parsed HTML
-        minimal_text_length: Minimum number of characters required
+        minimal_text_length: Minimum number of characters required (uses config default if None)
 
     Returns:
         True if document passes filter (has enough text), False otherwise
     """
     try:
+        # Use provided length or fall back to configuration
+        min_length = minimal_text_length if minimal_text_length is not None else settings.minimal_text_length
+
         # Extract all visible text content
         visible_text = parsed_html.get_text(separator=' ', strip=True)
 
         # Check if text length meets minimum requirement
         text_length = len(visible_text)
 
-        return text_length >= minimal_text_length
+        return text_length >= min_length
 
     except Exception as e:
         # If text extraction fails, reject the document
@@ -183,16 +196,21 @@ def output_console(record_data: List, normalized_payload: str, parsed_html: Beau
         print(f"{i}: {item}")
 
     print("-" * 40)
-    print("Visible Text Content Preview (first 2000 chars):")
+    print(f"Visible Text Content Preview (first {settings.preview_text_chars} chars):")
     print("-" * 40)
-    print(visible_text[:2000])
-    if len(visible_text) > 2000:
+    print(visible_text[:settings.preview_text_chars])
+    if len(visible_text) > settings.preview_text_chars:
         print(f"... (truncated, full length: {len(visible_text)} chars)")
 
-    print("-" * 40)
-    print(f"Original HTML length: {len(normalized_payload)} chars")
-    print(f"Extracted text length: {len(visible_text)} chars")
-    print(f"Compression ratio: {len(visible_text)/len(normalized_payload):.2%}")
+    # Show processing statistics if configured
+    if settings.show_processing_stats:
+        print("-" * 40)
+        print(f"Original HTML length: {len(normalized_payload)} chars")
+        print(f"Extracted text length: {len(visible_text)} chars")
+
+    # Show compression statistics if configured
+    if settings.show_compression_stats:
+        print(f"Compression ratio: {len(visible_text)/len(normalized_payload):.2%}")
 
     print("=" * 80)
 
@@ -228,7 +246,7 @@ def process_record(record_data: List, html_payload: str) -> Optional[dict]:
     parsed_html = parse_html(normalized_payload)
 
     # Step 4: Filter documents by minimal text length
-    if not pass_minimal_html(parsed_html, minimal_text_length=1000):
+    if not pass_minimal_html(parsed_html):
         # Skip further processing for documents that don't meet criteria
         return None
 
@@ -289,8 +307,8 @@ def read_warc_file(warc_file_path: str) -> None:
                         is_html = True
                     else:
                         # Only check payload content if content-type doesn't indicate HTML
-                        # Sample first 1KB to avoid processing huge payloads for detection
-                        payload_start = html_payload[:1024].strip().lower()
+                        # Sample configurable amount to avoid processing huge payloads for detection
+                        payload_start = html_payload[:settings.html_detection_sample].strip().lower()
                         is_html = payload_start.startswith('<!doctype html') or payload_start.startswith('<html')
 
                     if is_html:
