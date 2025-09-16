@@ -5,221 +5,16 @@ Reads gzipped WARC files and processes HTML records sequentially.
 """
 
 import gzip
-import html
 import sys
 import unicodedata
-from typing import List, Optional, Union
+from typing import List, Optional
 from warcio.archiveiterator import ArchiveIterator
-import chardet
-import ftfy
-from bs4 import BeautifulSoup, Comment
+
+# Import PyRex modules
 from config.settings import settings
-
-
-def decode_and_normalize(payload: bytes) -> str:
-    """
-    Robustly decode raw bytes to UTF-8 string.
-
-    Args:
-        payload: Raw bytes from WARC record
-
-    Returns:
-        UTF-8 string (may still contain encoding artifacts)
-    """
-    # Optimize: Sample first portion for encoding detection (configurable for performance)
-    sample_size = min(settings.chardet_sample_size, len(payload))
-    detection = chardet.detect(payload[:sample_size])
-
-    encoding = detection.get('encoding')
-    confidence = detection.get('confidence', 0.0)
-
-    # Fall back to UTF-8 if detection is uncertain
-    if confidence < settings.confidence_threshold or not encoding:
-        encoding = 'utf-8'
-
-    try:
-        # Decode with detected/fallback encoding
-        return payload.decode(encoding, errors='replace')
-    except (UnicodeDecodeError, LookupError):
-        # Final fallback
-        return payload.decode('utf-8', errors='replace')
-
-
-def fix_text_encoding(text: str) -> str:
-    """
-    Fix encoding artifacts, mojibake, and HTML entities in UTF-8 text.
-
-    Handles common issues like:
-    - Win-1252 text decoded as Latin-1 (smart quotes, em-dashes)
-    - Double-encoded UTF-8 (Ã¤ → ä)
-    - HTML entities (&amp; → &, &lt; → <, etc.)
-    - ANSI escape codes and Latin ligatures
-
-    Args:
-        text: UTF-8 string that may contain encoding artifacts
-
-    Returns:
-        Repaired UTF-8 string with encoding issues and HTML entities fixed
-    """
-    try:
-        # Optimize: Check if text likely needs processing to avoid unnecessary calls
-        # Skip if text is pure ASCII and has no obvious encoding issues
-        if not settings.skip_ascii_optimization and text.isascii() and '&' not in text and 'â' not in text:
-            return text
-
-        # Step 1: Use ftfy to fix mojibake and encoding issues
-        fixed_text = ftfy.fix_text(
-            text,
-            fix_entities=True,        # Fix basic HTML entities
-            remove_terminal_escapes=True,  # Remove ANSI escape codes
-            fix_latin_ligatures=True,      # Fix Latin ligatures
-            uncurl_quotes=False       # Keep smart quotes as-is
-        )
-
-        # Step 2: More comprehensive HTML entity conversion (only if needed)
-        if '&' in fixed_text:
-            return html.unescape(fixed_text)
-        else:
-            return fixed_text
-
-    except Exception as e:
-        # If processing fails, return original text and log the error
-        print(f"Warning: Text encoding repair failed: {e}")
-        return text
-
-
-def parse_html(html_content: str) -> BeautifulSoup:
-    """
-    Parse HTML content into a structured representation with aggressive cleaning.
-
-    Removes all non-displaying elements to make subsequent processing more efficient:
-    - Comments
-    - CDATA sections
-    - Scripts and style tags
-    - Meta tags and other head elements that don't contribute to visible content
-
-    Args:
-        html_content: Raw HTML string to parse
-
-    Returns:
-        BeautifulSoup object with cleaned, well-formed HTML
-    """
-    try:
-        # Use configured parser preference for speed and compatibility
-        parser = 'lxml' if settings.use_lxml_parser else 'html.parser'
-        try:
-            soup = BeautifulSoup(html_content, parser)
-        except:
-            # Fallback to html.parser if preferred parser fails
-            soup = BeautifulSoup(html_content, 'html.parser')
-
-        # Remove comments if configured
-        if settings.remove_comments:
-            for comment in soup.find_all(string=lambda text: isinstance(text, Comment)):
-                comment.extract()
-
-        # Build list of elements to remove based on settings
-        elements_to_remove = []
-        if settings.remove_scripts:
-            elements_to_remove.append("script")
-        if settings.remove_styles:
-            elements_to_remove.append("style")
-
-        # Always remove these non-content elements
-        elements_to_remove.extend(["meta", "link", "title", "base"])
-
-        # Remove configured elements completely
-        for element in soup(elements_to_remove):
-            element.decompose()
-
-        # Remove CDATA sections (they appear as text nodes, harder to target specifically)
-        # BeautifulSoup handles CDATA automatically, but we can clean any remaining artifacts
-
-        return soup
-
-    except Exception as e:
-        # If parsing fails, create a simple document with the text content
-        print(f"Warning: HTML parsing failed: {e}")
-        # Wrap in minimal HTML structure for consistent handling
-        fallback_html = f"<html><body>{html.escape(html_content)}</body></html>"
-        return BeautifulSoup(fallback_html, 'html.parser')
-
-
-def pass_minimal_html(parsed_html: BeautifulSoup, minimal_text_length: Optional[int] = None) -> bool:
-    """
-    Filter documents based on minimal displayable text length.
-
-    Discards documents that have less than minimal_text_length characters
-    of non-tag text content.
-
-    Args:
-        parsed_html: BeautifulSoup object with parsed HTML
-        minimal_text_length: Minimum number of characters required (uses config default if None)
-
-    Returns:
-        True if document passes filter (has enough text), False otherwise
-    """
-    try:
-        # Use provided length or fall back to configuration
-        min_length = minimal_text_length if minimal_text_length is not None else settings.minimal_text_length
-
-        # Extract all visible text content
-        visible_text = parsed_html.get_text(separator=' ', strip=True)
-
-        # Check if text length meets minimum requirement
-        text_length = len(visible_text)
-
-        return text_length >= min_length
-
-    except Exception as e:
-        # If text extraction fails, reject the document
-        print(f"Warning: Text length check failed: {e}")
-        return False
-
-
-def output_console(record_data: List, normalized_payload: str, parsed_html: BeautifulSoup, visible_text: str) -> None:
-    """
-    Display processed record information to console and wait for user input.
-
-    Args:
-        record_data: List containing WARC record metadata
-        normalized_payload: Original normalized HTML payload
-        parsed_html: Parsed and cleaned HTML structure
-        visible_text: Extracted visible text content
-    """
-    print("=" * 80)
-    print("WARC Record:")
-    print("-" * 40)
-
-    # Display record metadata
-    for i, item in enumerate(record_data):
-        print(f"{i}: {item}")
-
-    print("-" * 40)
-    print(f"Visible Text Content Preview (first {settings.preview_text_chars} chars):")
-    print("-" * 40)
-    print(visible_text[:settings.preview_text_chars])
-    if len(visible_text) > settings.preview_text_chars:
-        print(f"... (truncated, full length: {len(visible_text)} chars)")
-
-    # Show processing statistics if configured
-    if settings.show_processing_stats:
-        print("-" * 40)
-        print(f"Original HTML length: {len(normalized_payload)} chars")
-        print(f"Extracted text length: {len(visible_text)} chars")
-
-    # Show compression statistics if configured
-    if settings.show_compression_stats:
-        print(f"Compression ratio: {len(visible_text)/len(normalized_payload):.2%}")
-
-    print("=" * 80)
-
-    # Wait for user input before continuing
-    try:
-        input("Press Enter to continue to next record (Ctrl+C to exit)...")
-    except KeyboardInterrupt:
-        print("\nExiting...")
-        sys.exit(0)
+from pyrex_basic import decode_and_normalize, fix_text_encoding
+from pyrex_html import parse_html, filter_minimal_html
+from pyrex_output import output_console
 
 
 def process_record(record_data: List, html_payload: str) -> Optional[dict]:
@@ -246,7 +41,7 @@ def process_record(record_data: List, html_payload: str) -> Optional[dict]:
     parsed_html = parse_html(normalized_payload)
 
     # Step 4: Filter documents by minimal text length
-    if not pass_minimal_html(parsed_html):
+    if not filter_minimal_html(parsed_html):
         # Skip further processing for documents that don't meet criteria
         return None
 
