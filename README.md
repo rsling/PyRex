@@ -1,6 +1,6 @@
 # PyRex – High-quality corpora from CommonCrawl snapshots
 
-I stopped maintaining my old [texrex](https://github.com/rsling/texrex) web data cleaning software in December 2021. PyRex is a streamlined and cleaned up Python 3 reimplementation of texrex made for analysing CommonCrawl data. The focus i entirely on German. After all, there is THE standard web corpora of English now. It covers all English language on the web, and it's bleeding representative, too!
+I stopped maintaining my old [texrex](https://github.com/rsling/texrex) web data cleaning software in December 2021. PyRex is a streamlined and cleaned up Python 3 reimplementation of texrex made for analysing CommonCrawl data. The focus i entirely on German. After all, there is THE standard web corpora of English now. It covers all English language on the web, and it's bleeding representative, too! Nobody will need another English web corpus ever.
 
 # Current version: **One (Always Hardcore)**
 
