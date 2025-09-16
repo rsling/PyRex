@@ -14,7 +14,7 @@ from warcio.archiveiterator import ArchiveIterator
 from config.settings import settings
 from pyrex_basic import decode_and_normalize, fix_text_encoding
 from pyrex_html import parse_html, filter_minimal_html
-from pyrex_output import output_console
+from pyrex_output import output_console, output_dump
 
 
 def process_record(record_data: List, html_payload: str) -> Optional[dict]:
@@ -110,15 +110,25 @@ def read_warc_file(warc_file_path: str) -> None:
                         # Process the record and get all processed data
                         processed_data = process_record(record_data, html_payload)
 
-                        # Only display if the record passed all filters
+                        # Only output if the record passed all filters
                         if processed_data is not None:
-                            # Display the processed record to console
-                            output_console(
-                                processed_data['record_data'],
-                                processed_data['normalized_payload'],
-                                processed_data['parsed_html'],
-                                processed_data['visible_text']
-                            )
+                            # Choose output method based on configuration
+                            if settings.output_mode == "dump":
+                                output_dump(
+                                    processed_data['record_data'],
+                                    processed_data['normalized_payload'],
+                                    processed_data['parsed_html'],
+                                    processed_data['visible_text'],
+                                    warc_file_path
+                                )
+                            else:
+                                # Default to console output
+                                output_console(
+                                    processed_data['record_data'],
+                                    processed_data['normalized_payload'],
+                                    processed_data['parsed_html'],
+                                    processed_data['visible_text']
+                                )
                         else:
                             print(f"Skipping HTML record #{record_count} (insufficient text content)")
                     else:
@@ -126,7 +136,11 @@ def read_warc_file(warc_file_path: str) -> None:
                 else:
                     print(f"Skipping non-response record #{record_count} (Type: {record.rec_type})")
 
-            print(f"\nFinished processing WARC file. Total records processed: {record_count}")
+            if settings.output_mode == "dump":
+                print(f"\nFinished processing WARC file. Total records processed: {record_count}")
+                print(f"Output written to: {settings.output_directory}/")
+            else:
+                print(f"\nFinished processing WARC file. Total records processed: {record_count}")
 
     except FileNotFoundError:
         print(f"Error: WARC file not found: {warc_file_path}")

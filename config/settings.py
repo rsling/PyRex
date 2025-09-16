@@ -5,9 +5,10 @@ Centralized configuration management using Pydantic Settings with TOML support.
 """
 
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Tuple, Type
 from pydantic import Field
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, SettingsConfigDict, PydanticBaseSettingsSource
+from pydantic_settings.sources import TomlConfigSettingsSource
 
 
 class PyRexSettings(BaseSettings):
@@ -84,6 +85,21 @@ class PyRexSettings(BaseSettings):
     )
 
     # Output Settings
+    output_mode: str = Field(
+        default="console",
+        description="Output mode: 'console' for interactive display, 'dump' for file output"
+    )
+
+    output_directory: str = Field(
+        default="output",
+        description="Directory for output files (created if doesn't exist)"
+    )
+
+    dump_with_html_tags: bool = Field(
+        default=False,
+        description="Include HTML tags in dumped output (False for plain text only)"
+    )
+
     show_compression_stats: bool = Field(
         default=True,
         description="Display compression ratio statistics in console output"
@@ -110,6 +126,29 @@ class PyRexSettings(BaseSettings):
         default=False,
         description="Enable near-duplicate detection (future feature)"
     )
+
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: Type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> Tuple[PydanticBaseSettingsSource, ...]:
+        """
+        Customize the order and selection of settings sources.
+
+        Returns:
+            Tuple of settings sources in priority order (first wins)
+        """
+        return (
+            init_settings,  # Highest priority: direct initialization
+            env_settings,   # Second: environment variables
+            TomlConfigSettingsSource(settings_cls),  # Third: TOML file
+            dotenv_settings,  # Fourth: .env file
+            file_secret_settings,  # Lowest: secrets
+        )
 
 
 # Global settings instance - loaded once on import

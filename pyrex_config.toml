@@ -4,7 +4,7 @@
 # Settings can also be overridden using environment variables with PYREX_ prefix.
 # Example: PYREX_MINIMAL_TEXT_LENGTH=500
 
-[text_processing]
+# Text Processing Settings
 # Minimum text length (characters) required to process a document
 # Documents with less text content will be filtered out
 minimal_text_length = 1000
@@ -12,7 +12,7 @@ minimal_text_length = 1000
 # Number of characters to display in console preview
 preview_text_chars = 2000
 
-[performance]
+# Performance Settings
 # Sample size in bytes for encoding detection
 # Larger samples are more accurate but slower for big files
 chardet_sample_size = 32768
@@ -25,7 +25,7 @@ html_detection_sample = 1024
 # Lower values are more permissive, higher values more strict
 confidence_threshold = 0.7
 
-[html_processing]
+# HTML Processing Settings
 # HTML cleaning options - remove non-content elements
 remove_scripts = true
 remove_comments = true
@@ -34,21 +34,31 @@ remove_styles = true
 # Parser preference - lxml is faster but requires additional dependency
 use_lxml_parser = true
 
-[text_encoding]
+# Text Encoding Settings
 # Skip ASCII optimization in text encoding repair
 # Enable for more thorough processing of seemingly clean text
 skip_ascii_optimization = false
 
-[output]
+# Output Settings
+# Output method: "console" for interactive display, "dump" for file output
+output_mode = "dump"
+
+# Output directory for dump files (created if doesn't exist)
+output_directory = "output"
+
+# Include HTML tags in output (both console and dump)
+# false = plain text only, true = HTML with tags
+dump_with_html_tags = true
+
 # Display options for console output
 show_compression_stats = true
 show_processing_stats = true
 
-[debug]
+# Debug Settings
 # Enable verbose logging for troubleshooting
-verbose_logging = false
+verbose_logging = true
 
-[future_features]
+# Future Features
 # Features planned for future implementation
 enable_boilerplate_detection = false
 enable_deduplication = false
