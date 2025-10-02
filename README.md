@@ -2,7 +2,7 @@
 
 I stopped maintaining my old [texrex](https://github.com/rsling/texrex) web data cleaning software in December 2021. PyRex is a streamlined and cleaned up Python 3 reimplementation of texrex made for analysing CommonCrawl data. The focus i entirely on German. After all, there is THE standard web corpora of English now. It covers all English language on the web, and it's bleeding representative, too! Nobody will need another English web corpus ever.
 
-# Current version codenamed **One (Always Hardcore)**
+# Current version codenamed *One (Always Hardcore)*
 
 **Update 2025** Instead of listing plannes features, I simply admit that what we did 10 to 15 years ago was rather boring and borderline trivial. I'm now working with Claude to very quickly rebuild the functionality of texrex in Python, making heavy use of existing libraries. Since I'm not being paid to do coding, this is the only way there will ever be any new COW corpora again. Any of the problematic issues of LLM coding (security concerns, very large codebases, etc.) don't affect PyRex. Honestly, I mean ... A collection of text processing scripts.
 
